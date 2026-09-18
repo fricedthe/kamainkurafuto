@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cookie Clicker with Gacha & Pets</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background: #2c1d11;
+            color: #fff;
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* 左側：クッキーエリア */
+        .cookie-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle, #573d26 0%, #2c1d11 100%);
+            border-right: 4px solid #1a100a;
+            position: relative;
+            padding: 20px;
+        }
+
+        .cookie-stats {
+            text-align: center;
+            margin-bottom: 20px;
+            z-index: 10;
+        }
+
+        #cookie-count {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #f1c40f;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
+        }
+
+        #cps-count {
+            font-size: 1.2rem;
+            color: #bdc3c7;
+            margin-top: 5px;
+        }
+
+        .cookie-container {
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.05s;
+        }
+
+        .cookie-container:active {
+            transform: scale(0.95);
+        }
+
+        #main-cookie {
+            width: 250px;
+            height: 250px;
+            background: #d35400;
+            border-radius: 50%;
+            border: 10px solid #ba4a00;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5), inset -10px -10px 20px rgba(0,0,0,0.4);
+            position: relative;
+        }
+
+        /* チョコチップの表現 */
+        #main-cookie::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0; left: 0;
+            background-image: 
+                radial-gradient(circle at 30% 30%, #3e2723 15px, transparent 16px),
+                radial-gradient(circle at 70% 40%, #3e2723 12px, transparent 13px),
+                radial-gradient(circle at 40% 70%, #3e2723 18px, transparent 19px),
+                radial-gradient(circle at 75% 70%, #3e2723 14px, transparent 15px),
+                radial-gradient(circle at 50% 20%, #3e2723 10px, transparent 11px);
+        }
+
+        /* 右側：ショップ＆ガチャ・ペットエリア */
+        .panel-section {
+            width: 450px;
+            display: flex;
+            flex-direction: column;
+            background: #22140c;
+        }
+
+        /* タブ切り替え */
+        .tabs {
+            display: flex;
+            background: #1a100a;
+            border-bottom: 2px solid #3e2723;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            font-weight: bold;
+            background: #2a180e;
+            color: #aaa;
+            transition: background 0.2s, color 0.2s;
+            font-size: 0.95rem;
+        }
+
+        .tab.active {
+            background: #3e2723;
+            color: #fff;
+            border-bottom: 3px solid #e67e22;
+        }
+
+        /* コンテンツ表示エリア */
+        .tab-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* ショップ（小さめサイズに調整） */
+        .shop-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #362216;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            border: 1px solid #4a3222;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .shop-item:hover {
+            background: #462c1e;
+        }
+
+        .shop-item.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #25170f;
+        }
+
+        .item-info h3 {
+            font-size: 0.95rem;
+            color: #f39c12;
+        }
+
+        .item-info p {
+            font-size: 0.75rem;
+            color: #bdc3c7;
+        }
+
+        .item-cost {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #2ecc71;
+        }
+
+        /* ガチャ・ペットエリア */
+        .gacha-box {
+            background: #34495e;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 20px;
+            border: 2px solid #2980b9;
+        }
+
+        .gacha-box h3 {
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+            color: #3498db;
+        }
+
+        .gacha-btn {
+            background: #e67e22;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+            box-shadow: 0 4px #d35400;
+        }
+
+        .gacha-btn:active {
+            margin-top: 13px;
+            box-shadow: 0 1px #d35400;
+        }
+
+        .gacha-btn.disabled {
+            background: #7f8c8d;
+            box-shadow: 0 4px #95a5a6;
+            cursor: not-allowed;
+        }
+
+        /* インベントリ */
+        .inventory-title {
+            font-size: 1rem;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #3e2723;
+            padding-bottom: 5px;
+            color: #e67e22;
+        }
+
+        .pet-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+        }
+
+        .pet-card {
+            background: #2c3e50;
+            border: 2px solid #34495e;
+            border-radius: 6px;
+            padding: 10px;
+            text-align: center;
+            position: relative;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .pet-card.equipped {
+            border-color: #2ecc71;
+            background: #1e3727;
+        }
+
+        .pet-card .status-badge {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            font-size: 0.65rem;
+            background: #2ecc71;
+            padding: 2px 4px;
+            border-radius: 3px;
+            display: none;
+        }
+
+        .pet-card.equipped .status-badge {
+            display: block;
+        }
+
+        .pet-name {
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .pet-rarity {
+            font-size: 0.7rem;
+            padding: 2px 4px;
+            border-radius: 3px;
+            display: inline-block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        /* レア度カラー */
+        .rarity-common { background: #7f8c8d; color: white; }
+        .rarity-rare { background: #2980b9; color: white; }
+        .rarity-epic { background: #9b59b6; color: white; }
+        .rarity-legendary { background: #f1c40f; color: black; }
+
+        .pet-effect {
+            font-size: 0.75rem;
+            color: #f1c40f;
+        }
+
+        .pet-count {
+            font-size: 0.7rem;
+            color: #bdc3c7;
+            margin-top: 3px;
+        }
+
+        /* 浮遊数字アニメーション */
+        .floating-number {
+            position: absolute;
+            color: #fff;
+            font-size: 1.5rem;
+            font-weight: bold;
+            pointer-events: none;
+            animation: floatUp 0.8s ease-out forwards;
+            text-shadow: 2px 2px 2px rgba(0,0,0,0.8);
+            z-index: 100;
+        }
+
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-100px) scale(0.8); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 左側：クッキーエリア -->
+    <div class="cookie-section" id="cookie-section">
+        <div class="cookie-stats">
+            <div id="cookie-count">0 クッキー</div>
+            <div id="cps-count">毎秒: 0</div>
+        </div>
+        <div class="cookie-container" id="cookie-btn">
+            <div id="main-cookie"></div>
+        </div>
+    </div>
+
+    <!-- 右側：パネルエリア -->
+    <div class="panel-section">
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('shop')">⚙️ ショップ</div>
+            <div class="tab" onclick="switchTab('gacha')">🦊 ガチャ & ペット</div>
+        </div>
+
+        <!-- ショップタブのコンテンツ -->
+        <div id="shop-tab" class="tab-content active">
+            <!-- 各アイテム（サイズを小ぶりに設計） -->
+            <div class="shop-item" onclick="buyUpgrade('cursor')">
+                <div class="item-info">
+                    <h3>カーソル</h3>
+                    <p>自動でクリック（毎秒 +0.1）</p>
+                </div>
+                <div class="item-cost" id="cost-cursor">15</div>
+            </div>
+            <div class="shop-item" onclick="buyUpgrade('grandma')">
+                <div class="item-info">
+                    <h3>グランマ</h3>
+                    <p>クッキーを焼いてくれる（毎秒 +1）</p>
+                </div>
+                <div class="item-cost" id="cost-grandma">100</div>
+            </div>
+            <div class="shop-item" onclick="buyUpgrade('farm')">
+                <div class="item-info">
+                    <h3>ファーム</h3>
+                    <p>種からクッキーを育てる（毎秒 +8）</p>
+                </div>
+                <div class="item-cost" id="cost-farm">1,100</div>
+            </div>
+            <div class="shop-item" onclick="buyUpgrade('factory')">
+                <div class="item-info">
+                    <h3>ファクトリー</h3>
+                    <p>大量生産ライン（毎秒 +47）</p>
+                </div>
+                <div class="item-cost" id="cost-factory">12,000</div>
+            </div>
+            <div class="shop-item" onclick="buyUpgrade('mine')">
+                <div class="item-info">
+                    <h3>マイン</h3>
+                    <p>純粋なクッキーを採掘（毎秒 +260）</p>
+                </div>
+                <div class="item-cost" id="cost-mine">130,000</div>
+            </div>
+        </div>
+
+        <!-- ガチャ＆ペットタブのコンテンツ -->
+        <div id="gacha-tab" class="tab-content">
+            <div class="gacha-box">
+                <h3>超次元ペットガチャ</h3>
+                <p>1回: <span style="color:#f1c40f; font-weight:bold;">500</span> クッキー</p>
+                <button class="gacha-btn" id="gacha-button" onclick="rollGacha()">ガチャを引く</button>
+            </div>
+
+            <div class="inventory-title">ペットインベントリ (クリックで装備/解除)</div>
+            <div class="pet-grid" id="pet-inventory-grid">
+                <!-- JavaScriptで動的に生成 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ゲーム状態
+        let game = {
+            cookies: 0,
+            cps: 0,
+            clickPower: 1,
+            upgrades: {
+                cursor: { count: 0, cost: 15, cps: 0.1 },
+                grandma: { count: 0, cost: 100, cps: 1 },
+                farm: { count: 0, cost: 1100, cps: 8 },
+                factory: { count: 0, cost: 12000, cps: 47 },
+                mine: { count: 0, cost: 130000, cps: 260 }
+            },
+            pets: {
+                // 所持数
+                "ShadowFang": 0,
+                "AeroWing": 0,
+                "PyroCore": 0,
+                "VoidWalker": 0,
+                "ChronosCat": 0,
+                "OmegaOmega": 0
+            },
+            equippedPet: null
+        };
+
+        // ペットのデータ定義
+        const petData = {
+            "ShadowFang": { name: "シャドウファング", rarity: "common", label: "Common", effectText: "クリック +1", effect: (g) => { g.clickPower += 1; } },
+            "AeroWing": { name: "エアロウィング", rarity: "common", label: "Common", effectText: "CPS +5%", effect: (g) => { g.cps *= 1.05; } },
+            "PyroCore": { name: "パイロコア", rarity: "rare", label: "Rare", effectText: "クリック +5", effect: (g) => { g.clickPower += 5; } },
+            "VoidWalker": { name: "ヴォイドウォーカー", rarity: "rare", label: "Rare", effectText: "CPS +15%", effect: (g) => { g.cps *= 1.15; } },
+            "ChronosCat": { name: "クロノスキャット", rarity: "epic", label: "Epic", effectText: "全体の生産力 +30%", effect: (g) => { g.cps *= 1.30; g.clickPower *= 1.30; } },
+            "OmegaOmega": { name: "オメガ・ドラグーン", rarity: "legendary", label: "Legendary", effectText: "神ブースト (CPS+100%, クリック+50)", effect: (g) => { g.cps *= 2.0; g.clickPower += 50; } }
+        };
+
+        // ガチャ確率設定
+        const gachaPool = [
+            { id: "ShadowFang", weight: 40 },
+            { id: "AeroWing", weight: 35 },
+            { id: "PyroCore", weight: 15 },
+            { id: "VoidWalker", weight: 7 },
+            { id: "ChronosCat", weight: 2.5 },
+            { id: "OmegaOmega", weight: 0.5 }
+        ];
+
+        // タブ切り替え
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            if(tabName === 'shop') {
+                document.querySelectorAll('.tab')[0].classList.add('active');
+                document.getElementById('shop-tab').classList.add('active');
+            } else {
+                document.querySelectorAll('.tab')[1].classList.add('active');
+                document.getElementById('gacha-tab').classList.add('active');
+                renderInventory();
+            }
+        }
+
+        // クッキークリック処理
+        document.getElementById('cookie-btn').addEventListener('click', (e) => {
+            // 現在の実際のクリック力を計算
+            let currentClick = calculateCurrentStats().clickPower;
+            game.cookies += currentClick;
+            
+            createFloatingNumber(e.clientX, e.clientY, `+${Math.floor(currentClick)}`);
+            updateUI();
+        });
+
+        // 浮遊数字生成
+        function createFloatingNumber(x, y, text) {
+            const num = document.createElement('div');
+            num.className = 'floating-number';
+            num.style.left = `${x}px`;
+            num.style.top = `${y}px`;
+            num.innerText = text;
+            document.body.appendChild(num);
+            setTimeout(() => num.remove(), 800);
+        }
+
+        // アップグレード購入
+        function buyUpgrade(id) {
+            let upgrade = game.upgrades[id];
+            if (game.cookies >= upgrade.cost) {
+                game.cookies -= upgrade.cost;
+                upgrade.count++;
+                upgrade.cost = Math.floor(upgrade.cost * 1.15);
+                updateUI();
+            }
+        }
+
+        // ガチャを引く
+        function rollGacha() {
+            if (game.cookies >= 500) {
+                game.cookies -= 500;
+                
+                // 確率の抽選
+                let rand = Math.random() * 100;
+                let sum = 0;
+                let selectedId = gachaPool[0].id;
+                
+                for (let item of gachaPool) {
+                    sum += item.weight;
+                    if (rand <= sum) {
+                        selectedId = item.id;
+                        break;
+                    }
+                }
+                
+                game.pets[selectedId]++;
+                alert(`🎉 ガチャ結果: 「${petData[selectedId].name}」 (レア度: ${petData[selectedId].label}) を獲得しました！`);
+                
+                renderInventory();
+                updateUI();
+            }
+        }
+
+        // ペットの装備・解除
+        function togglePet(id) {
+            if (game.pets[id] === 0) return;
+            
+            if (game.equippedPet === id) {
+                game.equippedPet = null;
+            } else {
+                game.equippedPet = id;
+            }
+            renderInventory();
+            updateUI();
+        }
+
+        // リアルタイムの倍率・効果を適用したステータスを計算
+        function calculateCurrentStats() {
+            // ベースCPSを計算
+            let baseCps = 0;
+            for (let id in game.upgrades) {
+                baseCps += game.upgrades[id].count * game.upgrades[id].cps;
+            }
+            
+            let stats = {
+                cps: baseCps,
+                clickPower: 1
+            };
+
+            // 装備中ペットの効果を適用
+            if (game.equippedPet && petData[game.equippedPet]) {
+                petData[game.equippedPet].effect(stats);
+            }
+
+            return stats;
+        }
+
+        // インベントリの描画
+        function renderInventory() {
+            const grid = document.getElementById('pet-inventory-grid');
+            grid.innerHTML = '';
+            
+            for (let id in petData) {
+                if (game.pets[id] > 0) {
+                    const data = petData[id];
+                    const isEquipped = game.equippedPet === id;
+                    
+                    const card = document.createElement('div');
+                    card.className = `pet-card ${isEquipped ? 'equipped' : ''}`;
+                    card.onclick = () => togglePet(id);
+                    
+                    card.innerHTML = `
+                        <div class="status-badge">E</div>
+                        <div class="pet-name">${data.name}</div>
+                        <div class="pet-rarity rarity-${data.rarity}">${data.label}</div>
+                        <div class="pet-effect">${data.effectText}</div>
+                        <div class="pet-count">所持数: ${game.pets[id]}</div>
+                    `;
+                    grid.appendChild(card);
+                }
+            }
+            
+            if (grid.innerHTML === '') {
+                grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; color:#7f8c8d; font-size:0.9rem; padding:20px;">まだペットがいません。ガチャを引いてみましょう！</div>';
+            }
+        }
+
+        // UI全体の更新
+        function updateUI() {
+            let currentStats = calculateCurrentStats();
+            
+            // クッキー数とCPS表示
+            document.getElementById('cookie-count').innerText = `${Math.floor(game.cookies).toLocaleString()} クッキー`;
+            document.getElementById('cps-count').innerText = `毎秒: ${currentStats.cps.toFixed(1)}`;
+
+            // ショップボタンの状態と価格更新
+            for (let id in game.upgrades) {
+                let upgrade = game.upgrades[id];
+                let costEl = document.getElementById(`cost-${id}`);
+                if (costEl) {
+                    costEl.innerText = upgrade.cost.toLocaleString();
+                    let itemEl = costEl.parentElement;
+                    if (game.cookies >= upgrade.cost) {
+                        itemEl.classList.remove('disabled');
+                    } else {
+                        itemEl.classList.add('disabled');
+                    }
+                }
+            }
+
+            // ガチャボタンの状態更新
+            const gachaBtn = document.getElementById('gacha-button');
+            if (game.cookies >= 500) {
+                gachaBtn.classList.remove('disabled');
+            } else {
+                gachaBtn.classList.add('disabled');
+            }
+        }
+
+        // ゲームループ（1秒に20回実行、毎秒CPS分のクッキーを追加）
+        setInterval(() => {
+            let currentStats = calculateCurrentStats();
+            if (currentStats.cps > 0) {
+                game.cookies += currentStats.cps / 20;
+                updateUI();
+            }
+        }, 500);
+
+        // 初期実行
+        updateUI();
+    </script>
+</body>
+</html>
