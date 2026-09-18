@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clicker Game v15</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #0b111e;
+            color: #ffffff;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        /* Left Area (Main Clicker) */
+        .left-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 30px;
+            position: relative;
+            border-right: 2px solid #1a263f;
+        }
+        /* Right Area (Menu UI) */
+        .right-panel {
+            width: 480px;
+            background-color: #0b111e;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        /* Auto Clicker Header Style */
+        .autoclicker-container {
+            align-self: flex-start;
+            background-color: #111a2e;
+            border: 1px solid #1a263f;
+            border-radius: 12px;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .autoclicker-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #a0aec0;
+            letter-spacing: 0.5px;
+        }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #1a263f;
+            transition: .2s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 4px;
+            bottom: 4px;
+            background-color: #718096;
+            transition: .2s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #f6ad55;
+        }
+        input:checked + .slider:before {
+            transform: translateX(24px);
+            background-color: #ffffff;
+        }
+        .admin-btn {
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.1s;
+        }
+        .admin-btn:hover {
+            transform: scale(1.1);
+        }
+
+        /* Coin Counter View */
+        .coin-display {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .coin-label {
+            font-size: 14px;
+            color: #a0aec0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+        }
+        .coin-amount {
+            font-size: 48px;
+            font-weight: 900;
+            color: #ffffff;
+        }
+        .cps-amount {
+            font-size: 16px;
+            color: #f6ad55;
+            margin-top: 4px;
+        }
+
+        /* Center Clicker Big Button */
+        .clicker-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            width: 100%;
+        }
+        .big-yellow-btn {
+            width: 240px;
+            height: 240px;
+            background: radial-gradient(circle, #ffe066 0%, #f5b041 100%);
+            border-radius: 50%;
+            border: 8px solid #f39c12;
+            box-shadow: 0 0 30px rgba(245, 176, 65, 0.4);
+            cursor: pointer;
+            position: relative;
+            outline: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.05s ease;
+        }
+        .big-yellow-btn:active {
+            transform: scale(0.92);
+        }
+        /* Custom Art Face on Button */
+        .face-art {
+            width: 140px;
+            height: 140px;
+            position: relative;
+            pointer-events: none;
+        }
+        .face-eye {
+            position: absolute;
+            top: 40px;
+            width: 22px;
+            height: 22px;
+            background-color: #2c3e50;
+            border-radius: 50%;
+        }
+        .face-eye.left { left: 25px; }
+        .face-eye.right {
+            right: 25px;
+            background: none;
+            height: 22px;
+            width: 22px;
+            position: absolute;
+        }
+        .face-eye.right::before, .face-eye.right::after {
+            content: '';
+            position: absolute;
+            background-color: #2c3e50;
+            width: 24px;
+            height: 4px;
+            top: 9px;
+            left: -1px;
+        }
+        .face-eye.right::before { transform: rotate(45deg); }
+        .face-eye.right::after { transform: rotate(-45deg); }
+        
+        .face-mouth {
+            position: absolute;
+            bottom: 35px;
+            left: 45px;
+            width: 50px;
+            height: 20px;
+            border-bottom: 5px solid #2c3e50;
+            border-radius: 0 0 25px 25px;
+        }
+        .face-arrow {
+            position: absolute;
+            width: 4px;
+            height: 20px;
+            background-color: rgba(44, 62, 80, 0.3);
+            left: 68px;
+        }
+        .face-arrow.a1 { top: 10px; }
+        .face-arrow.a2 { bottom: 10px; }
+
+        /* Dynamic Impulse Particle Stack Area */
+        .particle-stack-container {
+            position: absolute;
+            pointer-events: none;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        .stack-value {
+            font-size: 36px;
+            font-weight: 900;
+            color: #ffe066;
+            text-shadow: 0 0 15px rgba(255, 224, 102, 0.8), 0 4px 8px rgba(0,0,0,0.5);
+            transform: scale(1);
+            transition: transform 0.05s ease-out;
+        }
+        .stack-bar-bg {
+            width: 100px;
+            height: 6px;
+            background-color: rgba(26, 38, 63, 0.6);
+            border-radius: 3px;
+            margin-top: 8px;
+            overflow: hidden;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .stack-bar-fill {
+            width: 100%;
+            height: 100%;
+            background-color: #ffe066;
+            transform-origin: left;
+            transition: transform 0.1s linear;
+        }
+
+        /* Right Panel Tab System */
+        .tabs-header {
+            display: flex;
+            border-bottom: 2px solid #1a263f;
+            background-color: #0b111e;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 16px 0;
+            background: none;
+            border: none;
+            color: #718096;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            position: relative;
+            transition: color 0.2s;
+            text-align: center;
+        }
+        .tab-btn.active {
+            color: #ffffff;
+        }
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: #f5b041;
+        }
+        .tabs-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .tab-pane {
+            display: none;
+        }
+        .tab-pane.active {
+            display: block;
+        }
+
+        /* List Items & Cards Design */
+        .upgrade-card {
+            background-color: #111a2e;
+            border: 1px solid #1a263f;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .card-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+        }
+        .card-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+        .card-desc {
+            font-size: 12px;
+            color: #a0aec0;
+        }
+        .card-cost {
+            font-size: 13px;
+            color: #f6ad55;
+            font-weight: bold;
+            margin-top: 2px;
+        }
+        .buy-btn {
+            background: linear-gradient(135deg, #3182ce 0%, #2b6cb0 100%);
+            border: none;
+            border-radius: 8px;
+            color: #ffffff;
+            padding: 10px 18px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.1s;
+            min-width: 100px;
+            text-align: center;
+        }
+        .buy-btn:disabled {
+            background: #1a263f;
+            color: #4a5568;
+            cursor: not-allowed;
+        }
+
+        /* Gacha Section Styling */
+        .gacha-box {
+            background-color: #111a2e;
+            border: 1px solid #1a263f;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+        .gacha-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #ffffff;
+            margin-bottom: 6px;
+        }
+        .gacha-req {
+            font-size: 12px;
+            color: #e53e3e;
+            margin-bottom: 12px;
+            font-weight: bold;
+        }
+        .gacha-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        .gacha-btn {
+            flex: 1;
+            min-width: 90px;
+            background: linear-gradient(135deg, #3182ce 0%, #2b6cb0 100%);
+            border: none;
+            border-radius: 8px;
+            color: #ffffff;
+            padding: 10px 8px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+        }
+        .gacha-btn.multi-10 {
+            background: linear-gradient(135deg, #805ad5 0%, #6b46c1 100%);
+        }
+        .gacha-btn.multi-100 {
+            background: linear-gradient(135deg, #dd6b20 0%, #c05621 100%);
+        }
+        .gacha-btn:disabled {
+            background: #1a263f;
+            color: #4a5568;
+            cursor: not-allowed;
+        }
+        .gacha-log-box {
+            background-color: #070c16;
+            border-radius: 8px;
+            padding: 12px;
+            height: 120px;
+            overflow-y: auto;
+            font-size: 12px;
+            font-family: monospace;
+            color: #a0aec0;
+            margin-top: 12px;
+            border: 1px solid #141d30;
+        }
+        .log-row {
+            margin-bottom: 4px;
+            line-height: 1.4;
+        }
+
+        /* Companion & Inventory Grid */
+        .companion-stats-summary {
+            background-color: #111a2e;
+            border: 1px solid #1a263f;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            color: #f6ad55;
+            font-weight: bold;
+        }
+        .inventory-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .inv-item {
+            background-color: #111a2e;
+            border: 1px solid #1a263f;
+            border-radius: 8px;
+            padding: 10px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .inv-name-box {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .inv-name {
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .inv-rarity {
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            padding: 1px 5px;
+            border-radius: 4px;
+            width: fit-content;
+        }
+        .inv-mult {
+            font-size: 13px;
+            color: #48bb78;
+            font-weight: bold;
+        }
+        .inv-count {
+            font-size: 12px;
+            color: #a0aec0;
+        }
+
+        /* Rarity Color Coding */
+        .rarity-common { color: #cbd5e0; background-color: rgba(203, 213, 224, 0.15); }
+        .rarity-レア { color: #4299e1; background-color: rgba(66, 153, 225, 0.15); }
+        .rarity-エピック { color: #9f7aea; background-color: rgba(159, 122, 234, 0.15); }
+        .rarity-レジェンド { color: #ed8936; background-color: rgba(237, 137, 54, 0.15); }
+        .rarity-ミシック { color: #ecc94b; background-color: rgba(236, 201, 75, 0.15); }
+        .rarity-ゴッドリー { color: #f56565; background-color: rgba(245, 101, 101, 0.15); }
+        .rarity-シークレット { color: #00b5d8; background-color: rgba(0, 181, 216, 0.15); }
+        .rarity-エターナル { color: #ed64a6; background-color: rgba(237, 100, 166, 0.15); }
+
+        /* Index / Encyclopedia styling */
+        .index-header {
+            margin-bottom: 15px;
+            font-size: 14px;
+            color: #a0aec0;
+        }
+        .index-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .index-row {
+            background-color: #111a2e;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #1a263f;
+        }
+        .index-locked {
+            color: #4a5568;
+            font-style: italic;
+        }
+
+        /* Scrollbar styles */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b111e;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1a263f;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #2d3748;
+        }
+        
+        /* Pulse Animation Class */
+        .pulse-active {
+            animation: pulse-anim 0.04s infinite alternate;
+        }
+        @keyframes pulse-anim {
+            0% { transform: scale(1); }
+            100% { transform: scale(0.97); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Left Main Interactive Area -->
+    <div class="left-panel">
+        <div class="autoclicker-container">
+            <span class="autoclicker-title">AUTO CLICKER</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="auto-clicker-toggle">
+                <span class="slider"></span>
+            </label>
+            <button class="admin-btn" id="admin-trigger" title="管理者モード">🔨</button>
+        </div>
+
+        <div class="coin-display">
+            <div class="coin-label">Coins</div>
+            <div class="coin-amount" id="coin-counter">0.00</div>
+            <div class="cps-amount" id="cps-counter">(+0.00/s)</div>
+        </div>
+
+        <div class="clicker-wrapper">
+            <div class="particle-stack-container" id="particle-stack">
+                <div class="stack-value" id="stack-value">+0</div>
+                <div class="stack-bar-bg" id="stack-bar-bg">
+                    <div class="stack-bar-fill" id="stack-bar-fill"></div>
+                </div>
+            </div>
+            <button class="big-yellow-btn" id="click-btn">
+                <div class="face-art">
+                    <div class="face-arrow a1"></div>
+                    <div class="face-eye left"></div>
+                    <div class="face-eye right"></div>
+                    <div class="face-mouth"></div>
+                    <div class="face-arrow a2"></div>
+                </div>
+            </button>
+        </div>
+
+        <div style="font-size: 12px; color: #4a5568; letter-spacing: 0.5px;">SPACE KEY LONG-PRESS SUPPORTED</div>
+    </div>
+
+    <!-- Right Side Menu System -->
+    <div class="right-panel">
+        <div class="tabs-header">
+            <button class="tab-btn active" onclick="switchTab('tab-upgrades')">無限強化</button>
+            <button class="tab-btn" onclick="switchTab('tab-rebirths')">宇宙再生</button>
+            <button class="tab-btn" onclick="switchTab('tab-gacha')">卵・ガチャ</button>
+            <button class="tab-btn" onclick="switchTab('tab-inventory')">相棒一覧</button>
+            <button class="tab-btn" onclick="switchTab('tab-index')">図鑑</button>
+        </div>
+
+        <div class="tabs-content">
+            <!-- Upgrades Tab -->
+            <div id="tab-upgrades" class="tab-pane active">
+                <div class="upgrade-card">
+                    <div class="card-info">
+                        <span class="card-title">クリック力強化</span>
+                        <span class="card-desc">1回の手動クリックで得られるパワーが基本値分増加します。</span>
+                        <span class="card-cost" id="cost-click">コスト: 10.00</span>
+                    </div>
+                    <button class="buy-btn" id="btn-upgrade-click" onclick="buyUpgrade('click')">購入</button>
+                </div>
+                <div class="upgrade-card">
+                    <div class="card-info">
+                        <span class="card-title">自動生産強化</span>
+                        <span class="card-desc">毎秒自動でコインを生み出すドローンを配備します。</span>
+                        <span class="card-cost" id="cost-auto">コスト: 50.00</span>
+                    </div>
+                    <button class="buy-btn" id="btn-upgrade-auto" onclick="buyUpgrade('auto')">購入</button>
+                </div>
+                <div class="upgrade-card">
+                    <div class="card-info">
+                        <span class="card-title">連打速度強化</span>
+                        <span class="card-desc">オートクリッカーの周波数を引き上げ、極限連打へ加速します。</span>
+                        <span class="card-cost" id="cost-speed">コスト: 100.00</span>
+                    </div>
+                    <button class="buy-btn" id="btn-upgrade-speed" onclick="buyUpgrade('speed')">購入</button>
+                </div>
+            </div>
+
+            <!-- Rebirths Tab -->
+            <div id="tab-rebirths" class="tab-pane">
+                <div id="rebirth-list"></div>
+            </div>
+
+            <!-- Gacha Tab -->
+            <div id="tab-gacha" class="tab-pane">
+                <div id="gacha-list"></div>
+            </div>
+
+            <!-- Inventory Tab -->
+            <div id="tab-inventory" class="tab-pane">
+                <div class="companion-stats-summary" id="companion-multiplier-summary">
+                    現在の最大相棒マルチプライヤー: x1.00
+                </div>
+                <div class="inventory-grid" id="inventory-container"></div>
+            </div>
+
+            <!-- Index Tab -->
+            <div id="tab-index" class="tab-pane">
+                <div class="index-header" id="index-progress-text">図鑑達成度: 0 / 1000 (0.00%)</div>
+                <div class="index-list" id="index-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Large Scale Number Formatting Definition
+        const SUFFIXES = [
+            "", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc",
+            "Ud", "Dd", "Td", "Qat", "Qit", "Sxd", "Spd", "Ocd", "Nod"
+        ];
+        const MAX_LIMIT = 1e60; // Novemdecillion Line
+
+        function formatNumber(num) {
+            if (num >= MAX_LIMIT) return "Novemdecillion (MAX)";
+            if (num < 1000) return num.toFixed(2);
+            const exp = Math.floor(Math.log10(num) / 3);
+            const index = Math.min(exp, SUFFIXES.length - 1);
+            const shortNum = num / Math.pow(10, index * 3);
+            return shortNum.toFixed(2) + " " + SUFFIXES[index];
+        }
+
+        // Rarities & Tables Definition
+        const RARITIES = ["コモン", "レア", "エピック", "レジェンド", "ミシック", "ゴッドリー", "シークレット", "エターナル"];
+        const RARITY_PROBS = [0.7000, 0.2000, 0.0750, 0.0200, 0.0040, 0.0008, 0.0001, 0.0001]; // Total = 1.0
+        const RARITY_MULTIPLIERS = [1.5, 3.0, 8.0, 25.0, 100.0, 500.0, 3000.0, 25000.0];
+
+        // Master Data Generation (1,000 unique pets spanned over 30 eggs)
+        const petMaster = [];
+        const eggCount = 30;
+        const petsPerEgg = 34; // 34 * 29 + 14 = 1000 pets total
+
+        let idCounter = 1;
+        for (let e = 1; e <= eggCount; e++) {
+            const limit = (e === eggCount) ? 14 : petsPerEgg;
+            for (let p = 1; p <= limit; p++) {
+                const rarityIndex = Math.floor((idCounter - 1) % 8);
+                petMaster.push({
+                    id: idCounter,
+                    eggId: e,
+                    name: `相棒ペット [No.${idCounter}]`,
+                    rarity: RARITIES[rarityIndex],
+                    multiplier: Math.pow(e, 1.8) * RARITY_MULTIPLIERS[rarityIndex]
+                });
+                idCounter++;
+            }
+        }
+
+        // 30 Rebirth Nodes Dynamic Generation Meta
+        const REBIRTH_NAMES = [
+            "宇宙超越次元 1", "銀河創生次元 2", "星雲深淵次元 3", "超新星爆発次元 4", "時空歪曲次元 5",
+            "暗黒物質次元 6", "星間虚無次元 7", "量子収縮次元 8", "多元宇宙次元 9", "異界領域次元 10",
+            "星核極光次元 11", "真空波動次元 12", "無限因果次元 13", "超弦振動次元 14", "虚空審判次元 15",
+            "次元崩壊次元 16", "天体巡礼次元 17", "永劫再帰次元 18", "宿命特異次元 19", "根源真理次元 20",
+            "光速不変次元 21", "重力崩壊次元 22", "絶対零度次元 23", "事象地平面次元 24", "特異点爆発次元 25",
+            "並行宇宙次元 26", "高次元結界次元 27", "始源虚無次元 28", "超越神域次元 29", "終焉終極次元 30"
+        ];
+
+        // Game State Variables Object
+        let state = {
+            coins: 0,
+            rebirths: 0,
+            upgrades: { click: 0, auto: 0, speed: 0 },
+            ownedPets: {}, // id -> count
+            unlockedIndex: {} // id -> boolean
+        };
+
+        // UI Element Tracking Variables
+        let accumulatedStack = 0;
+        let stackTimer = null;
+        let lastStackTime = 0;
+
+        // Core System Game Loop Management Hooks
+        function getClickPower() {
+            const base = 1 + state.upgrades.click * 2;
+            const companionMult = getBestCompanionMultiplier();
+            const rebirthMult = Math.pow(15, state.rebirths);
+            return base * companionMult * rebirthMult;
+        }
+
+        function getCps() {
+            const base = state.upgrades.auto * 5;
+            const companionMult = getBestCompanionMultiplier();
+            const rebirthMult = Math.pow(15, state.rebirths);
+            return base * companionMult * rebirthMult;
+        }
+
+        function getBestCompanionMultiplier() {
+            let maxMult = 1.0;
+            for (let id in state.ownedPets) {
+                if (state.ownedPets[id] > 0) {
+                    const pet = petMaster.find(p => p.id == id);
+                    if (pet && pet.multiplier > maxMult) {
+                        maxMult = pet.multiplier;
+                    }
+                }
+            }
+            return maxMult;
+        }
+
+        // Rebirth Logic Formulas
+        function getRebirthCost(rIndex) {
+            // First rebirth is 100K, scaling up 120x every node.
+            return 100000 * Math.pow(120, rIndex);
+        }
+
+        // Upgrade Cost Pricing Formulas
+        function getUpgradeCost(type) {
+            const lvl = state.upgrades[type];
+            if (type === 'click') return 10 * Math.pow(1.5, lvl);
+            if (type === 'auto') return 50 * Math.pow(1.6, lvl);
+            if (type === 'speed') return 100 * Math.pow(1.8, lvl);
+            return 0;
+        }
+
+        // Main Tab Switcher Handler
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            
+            // Highlight text tab anchor underbars
+            const evt = window.event;
+            if (evt && evt.target) {
+                evt.target.classList.add('active');
+            } else {
+                // Search fallback highlight
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    if (btn.getAttribute('onclick').includes(tabId)) btn.classList.add('active');
+                });
+            }
+
+            if (tabId === 'tab-inventory') renderInventory();
+            if (tabId === 'tab-index') renderIndex();
+        }
+
+        // Process Interactive Click Execution Sequence
+        function executeClick(manualCount = 1) {
+            const addValue = getClickPower() * manualCount;
+            if (state.coins < MAX_LIMIT) {
+                state.coins += addValue;
+                if (state.coins > MAX_LIMIT) state.coins = MAX_LIMIT;
+            }
+
+            // Trigger Dynamic Display Stack Text Animation System
+            accumulatedStack += addValue;
+            const now = Date.now();
+            lastStackTime = now;
+
+            const valEl = document.getElementById('stack-value');
+            const bgEl = document.getElementById('stack-bar-bg');
+            const fillEl = document.getElementById('stack-bar-fill');
+
+            valEl.innerText = "+" + formatNumber(accumulatedStack);
+            valEl.style.transform = "scale(1.25)";
+            setTimeout(() => { valEl.style.transform = "scale(1.0)"; }, 40);
+
+            bgEl.style.opacity = "1";
+            fillEl.style.transform = "scaleX(1)";
+
+            clearTimeout(stackTimer);
+            stackTimer = setTimeout(() => {
+                fadeStackOut();
+            }, 1000);
+
+            updateUI();
+        }
+
+        function fadeStackOut() {
+            const bgEl = document.getElementById('stack-bar-bg');
+            const valEl = document.getElementById('stack-value');
+            const fillEl = document.getElementById('stack-bar-fill');
+            
+            fillEl.style.transform = "scaleX(0)";
+            bgEl.style.opacity = "0";
+            valEl.innerText = "";
+            accumulatedStack = 0;
+        }
+
+        // Shop Purchase Logic Hook
+        function buyUpgrade(type) {
+            const cost = getUpgradeCost(type);
+            if (state.coins >= cost) {
+                state.coins -= cost;
+                state.upgrades[type]++;
+                updateUI();
+                saveGame();
+            }
+        }
+
+        // Rebirth Trigger Action Item
+        function triggerRebirth(rIndex) {
+            const cost = getRebirthCost(rIndex);
+            if (state.coins >= cost && state.rebirths === rIndex) {
+                state.coins = 0;
+                state.rebirths++;
+                // Reset basic tier upgrade structures upon dimensional shifts
+                state.upgrades.click = 0;
+                state.upgrades.auto = 0;
+                renderRebirthList();
+                updateUI();
+                saveGame();
+            }
+        }
+
+        // Dynamic System Data Inject Generator for Gacha & Rebirth Tabs
+        function renderRebirthList() {
+            const container = document.getElementById('rebirth-list');
+            container.innerHTML = "";
+            
+            for (let i = 0; i < 30; i++) {
+                // If this rebirth node was already beaten, completely strip it from viewing list
+                if (state.rebirths > i) continue;
+
+                const card = document.createElement('div');
+                card.className = "upgrade-card";
+                
+                const cost = getRebirthCost(i);
+                const isLocked = (state.rebirths !== i);
+
+                card.innerHTML = `
+                    <div class="card-info">
+                        <span class="card-title">${REBIRTH_NAMES[i]}</span>
+                        <span class="card-desc">全体の全算出力を爆発的に『x15.00』倍加へとシフト。</span>
+                        <span class="card-cost">コスト: ${formatNumber(cost)} コイン</span>
+                    </div>
+                    <button class="buy-btn" ${isLocked || state.coins < cost ? 'disabled' : ''} onclick="triggerRebirth(${i})">
+                        ${isLocked ? 'ロック中' : '宇宙再生'}
+                    </button>
+                `;
+                container.appendChild(card);
+            }
+            if(container.innerHTML === "") {
+                container.innerHTML = "<div style='color: #48bb78; font-weight: bold; text-align: center; padding: 20px;'>全30段階の宇宙再生を完全制覇しました！</div>";
+            }
+        }
+
+        function renderGachaList() {
+            const container = document.getElementById('gacha-list');
+            container.innerHTML = "";
+
+            for (let e = 1; e <= 30; e++) {
+                const reqRebirths = e - 1;
+                const isLocked = state.rebirths < reqRebirths;
+                
+                // Base cost scaling for each individual universe cosmic egg tier
+                const eggCost = 100 * Math.pow(8, e - 1);
+
+                const box = document.createElement('div');
+                box.className = "gacha-box";
+                
+                let actionHTML = "";
+                if (isLocked) {
+                    actionHTML = `<div class="gacha-req">解放条件: 宇宙再生 ${reqRebirths}回以上</div>`;
+                } else {
+                    actionHTML = `
+                        <div class="gacha-cost" style="font-size:13px; color:#f6ad55; font-weight:bold; margin-bottom:8px;">
+                            孵化価格: ${formatNumber(eggCost)} コイン
+                        </div>
+                        <div class="gacha-actions">
+                            <button class="gacha-btn single-pull" id="egg-${e}-pull1" ${state.coins < eggCost ? 'disabled' : ''} onclick="pullGacha(${e}, 1)">1回孵化</button>
+                            <button class="gacha-btn multi-10" id="egg-${e}-pull10" ${state.coins < eggCost * 10 ? 'disabled' : ''} onclick="pullGacha(${e}, 10)">10連ガチャ</button>
+                            <button class="gacha-btn multi-100" id="egg-${e}-pull100" ${state.coins < eggCost * 100 ? 'disabled' : ''} onclick="pullGacha(${e}, 100)">100連ガチャ</button>
+                        </div>
+                    `;
+                }
+
+                box.innerHTML = `
+                    <div class="gacha-title">🥚 宇宙卵 [Tier ${e}]</div>
+                    ${actionHTML}
+                    <div class="gacha-log-box" id="gacha-log-${e}">
+                        <div class="log-row" style="color: #4a5568;">孵化ログがここに自動出力されます...</div>
+                    </div>
+                `;
+                container.appendChild(box);
+            }
+        }
+
+        // Random Rarity Selector Formula Helper
+        function rollRarity() {
+            const r = Math.random();
+            let accum = 0;
+            for (let i = 0; i < RARITY_PROBS.length; i++) {
+                accum += RARITY_PROBS[i];
+                if (r <= accum) return RARITIES[i];
+            }
+            return RARITIES[0];
+        }
+
+        // Gacha Extraction Processing Core (Single, 10-Pull, and 100-Pull Integrated Loop)
+        function pullGacha(eggId, times) {
+            const eggCost = 100 * Math.pow(8, eggId - 1);
+            const totalCost = eggCost * times;
+
+            if (state.coins < totalCost) return;
+            state.coins -= totalCost;
+
+            const targetPool = petMaster.filter(p => p.eggId === eggId);
+            if (targetPool.length === 0) return;
+
+            const logsContainer = document.getElementById(`gacha-log-${eggId}`);
+            logsContainer.innerHTML = ""; // Wipe older lines clean for multi visual reads
+
+            const rolledSummary = {};
+
+            for (let t = 0; t < times; t++) {
+                const rolledRarityStr = rollRarity();
+                const raritySubPool = targetPool.filter(p => p.rarity === rolledRarityStr);
+                
+                let selectedPet = null;
+                if (raritySubPool.length > 0) {
+                    selectedPet = raritySubPool[Math.floor(Math.random() * raritySubPool.length)];
+                } else {
+                    // Fallback to random if subpool configuration slips
+                    selectedPet = targetPool[Math.floor(Math.random() * targetPool.length)];
+                }
+
+                // Inventory and Master Data Map Increments
+                state.ownedPets[selectedPet.id] = (state.ownedPets[selectedPet.id] || 0) + 1;
+                state.unlockedIndex[selectedPet.id] = true;
+
+                if (!rolledSummary[selectedPet.id]) {
+                    rolledSummary[selectedPet.id] = { pet: selectedPet, count: 0 };
+                }
+                rolledSummary[selectedPet.id].count++;
+            }
+
+            // Append compiled results to quiet log terminal view context
+            for (let id in rolledSummary) {
+                const item = rolledSummary[id];
+                const row = document.createElement('div');
+                row.className = 'log-row';
+                
+                let rarityClass = `rarity-${item.pet.rarity}`;
+                row.innerHTML = `🎉 <span class="inv-rarity ${rarityClass}">${item.pet.rarity}</span> <strong>${item.pet.name}</strong> x${item.count} がインベントリに自動追加されました！`;
+                logsContainer.appendChild(row);
+            }
+
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+
+            updateUI();
+            saveGame();
+        }
+
+        // Render Inventory Tab Hook
+        function renderInventory() {
+            const container = document.getElementById('inventory-container');
+            container.innerHTML = "";
+
+            let hasAny = false;
+            for (let id in state.ownedPets) {
+                if (state.ownedPets[id] > 0) {
+                    hasAny = true;
+                    const pet = petMaster.find(p => p.id == id);
+                    if (!pet) continue;
+
+                    const row = document.createElement('div');
+                    row.className = "inv-item";
+                    let rClass = `rarity-${pet.rarity}`;
+
+                    row.innerHTML = `
+                        <div class="inv-name-box">
+                            <span class="inv-name">${pet.name}</span>
+                            <span class="inv-rarity ${rClass}">${pet.rarity}</span>
+                        </div>
+                        <div style="display:flex; gap:20px; align-items:center;">
+                            <span class="inv-mult">x${formatNumber(pet.multiplier)} 倍率</span>
+                            <span class="inv-count">${state.ownedPets[id]} 体所持</span>
+                        </div>
+                    `;
+                    container.appendChild(row);
+                }
+            }
+            if (!hasAny) {
+                container.innerHTML = `<div style="color:#718096; text-align:center; padding:20px;">まだ相棒が誰もいません。卵ガチャから孵化させてみましょう！</div>`;
+            }
+            document.getElementById('companion-multiplier-summary').innerText = `現在の最大相棒マルチプライヤー: x${formatNumber(getBestCompanionMultiplier())}`;
+        }
+
+        // Render Index Grid Progress Tab Layout Viewport
+        function renderIndex() {
+            const container = document.getElementById('index-container');
+            container.innerHTML = "";
+
+            let totalUnlocked = 0;
+            petMaster.forEach(pet => {
+                const isUnlocked = state.unlockedIndex[pet.id] === true;
+                if (isUnlocked) totalUnlocked++;
+
+                const row = document.createElement('div');
+                row.className = "index-row";
+
+                if (isUnlocked) {
+                    let rClass = `rarity-${pet.rarity}`;
+                    row.innerHTML = `
+                        <div><strong>No.${pet.id}</strong> ${pet.name}</div>
+                        <span class="inv-rarity ${rClass}">${pet.rarity}</span>
+                    `;
+                } else {
+                    row.innerHTML = `
+                        <div class="index-locked">No.${pet.id} ？？？？？？</div>
+                        <span style="color:#4a5568; font-size:11px;">未発見</span>
+                    `;
+                }
+                container.appendChild(row);
+            });
+
+            const pct = ((totalUnlocked / petMaster.length) * 100).toFixed(2);
+            document.getElementById('index-progress-text').innerText = `図鑑達成度: ${totalUnlocked} / ${petMaster.length} (${pct}%)`;
+        }
+
+        // Live Periodic Data Interface View Layer Updates
+        function updateUI() {
+            document.getElementById('coin-counter').innerText = formatNumber(state.coins);
+            document.getElementById('cps-counter').innerText = "(+" + formatNumber(getCps()) + "/s)";
+
+            // Update Upgrades Button States
+            const btnClick = document.getElementById('btn-upgrade-click');
+            const costClick = getUpgradeCost('click');
+            document.getElementById('cost-click').innerText = `コスト: ${formatNumber(costClick)}`;
+            btnClick.disabled = (state.coins < costClick);
+
+            const btnAuto = document.getElementById('btn-upgrade-auto');
+            const costAuto = getUpgradeCost('auto');
+            document.getElementById('cost-auto').innerText = `コスト: ${formatNumber(costAuto)}`;
+            btnAuto.disabled = (state.coins < costAuto);
+
+            const btnSpeed = document.getElementById('btn-upgrade-speed');
+            const costSpeed = getUpgradeCost('speed');
+            document.getElementById('cost-speed').innerText = `コスト: ${formatNumber(costSpeed)}`;
+            btnSpeed.disabled = (state.coins < costSpeed);
+
+            // Dynamically refresh disabled button conditions over live gacha menus
+            for (let e = 1; e <= 30; e++) {
+                const eggCost = 100 * Math.pow(8, e - 1);
+                const b1 = document.getElementById(`egg-${e}-pull1`);
+                const b10 = document.getElementById(`egg-${e}-pull10`);
+                const b100 = document.getElementById(`egg-${e}-pull100`);
+                if (b1) b1.disabled = (state.coins < eggCost);
+                if (b10) b10.disabled = (state.coins < eggCost * 10);
+                if (b100) b100.disabled = (state.coins < eggCost * 100);
+            }
+
+            // Sync structural change locks on visible list nodes
+            document.querySelectorAll('#rebirth-list .buy-btn').forEach((btn, idx) => {
+                // Find correct actual index based on missing nodes offsets
+                const activeNodes = petMaster; 
+            });
+        }
+
+        // Safe LocalStorage Saving API
+        function saveGame() {
+            localStorage.setItem('clicker_universe_save_v15', JSON.stringify(state));
+        }
+
+        function loadGame() {
+            const data = localStorage.getItem('clicker_universe_save_v15');
+            if (data) {
+                try {
+                    const parsed = JSON.parse(data);
+                    if (parsed.upgrades) state.coins = parsed.coins || 0;
+                    state.rebirths = parsed.rebirths || 0;
+                    if (parsed.upgrades) state.upgrades = parsed.upgrades;
+                    state.ownedPets = parsed.ownedPets || {};
+                    state.unlockedIndex = parsed.unlockedIndex || {};
+                } catch(e) {
+                    console.error("Save state corrupt, fallback standard initialized", e);
+                }
+            }
+        }
+
+        // Initialize Native Key and Mouse Hardware Event Attachments
+        document.getElementById('click-btn').addEventListener('click', () => {
+            executeClick(1);
+        });
+
+        // Space Key Continuous Fire Macro Support Engine
+        let spacePressed = false;
+        let spaceInterval = null;
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (!spacePressed) {
+                    spacePressed = true;
+                    executeClick(1);
+                    // Speed multiplier syncs seamlessly with hardware limits
+                    const baseFreq = Math.max(1, 40 - state.upgrades.speed * 3);
+                    spaceInterval = setInterval(() => {
+                        // Multi batch load simulation triggers under speed lines
+                        const batches = state.upgrades.speed > 15 ? Math.floor(state.upgrades.speed / 2) : 1;
+                        executeClick(batches);
+                    }, baseFreq);
+                }
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'Space') {
+                spacePressed = false;
+                clearInterval(spaceInterval);
+            }
+        });
+
+        // Toggle Extreme Loop Engine for Auto Clicker Configuration Switch
+        const autoClickerToggle = document.getElementById('auto-clicker-toggle');
+        const clickBtnEl = document.getElementById('click-btn');
+        let mainClockLoop = null;
+
+        autoClickerToggle.addEventListener('change', () => {
+            if (autoClickerToggle.checked) {
+                clickBtnEl.classList.add('pulse-active');
+                startHighSpeedClock();
+            } else {
+                clickBtnEl.classList.remove('pulse-active');
+                stopHighSpeedClock();
+            }
+        });
+
+        function startHighSpeedClock() {
+            stopHighSpeedClock();
+            // Ultra high speed internal loops driven directly by Animation Frames for optimal rendering performance
+            function tick() {
+                if (!autoClickerToggle.checked) return;
+                
+                // Scale click batch density in direct correspondence to shop upgrade levels
+                const speedLvl = state.upgrades.speed;
+                let loopsCount = 1 + speedLvl;
+                if (speedLvl > 10) loopsCount += (speedLvl * 3);
+                if (speedLvl > 25) loopsCount += (speedLvl * 15);
+
+                executeClick(loopsCount);
+                mainClockLoop = requestAnimationFrame(tick);
+            }
+            mainClockLoop = requestAnimationFrame(tick);
+        }
+
+        function stopHighSpeedClock() {
+            cancelAnimationFrame(mainClockLoop);
+        }
+
+        // Admin Prompt Password Verification Routine Component Hook
+        document.getElementById('admin-trigger').addEventListener('click', () => {
+            const code = prompt("コードを入力してください:");
+            if (code === "abekentadesu") {
+                localStorage.removeItem('clicker_universe_save_v15');
+                state = {
+                    coins: 0,
+                    rebirths: 0,
+                    upgrades: { click: 0, auto: 0, speed: 0 },
+                    ownedPets: {},
+                    unlockedIndex: {}
+                };
+                fadeStackOut();
+                autoClickerToggle.checked = false;
+                clickBtnEl.classList.remove('pulse-active');
+                stopHighSpeedClock();
+                renderRebirthList();
+                renderGachaList();
+                updateUI();
+                alert("すべてのゲームデータが正常に完全削除されました。最初から再開します。");
+            } else if (code !== null) {
+                alert("認証コードが正しくありません。");
+            }
+        });
+
+        // 10-Second Silent Autosave Tick Loop Thread
+        setInterval(() => {
+            saveGame();
+        }, 10000);
+
+        // Constant Ambient Passives Core Engine
+        setInterval(() => {
+            const passiveGain = getCps() / 10;
+            if (state.coins < MAX_LIMIT) {
+                state.coins += passiveGain;
+                if (state.coins > MAX_LIMIT) state.coins = MAX_LIMIT;
+            }
+            updateUI();
+        }, 100);
+
+        // Final Bootstrapper Load Sequence
+        loadGame();
+        renderRebirthList();
+        renderGachaList();
+        updateUI();
+    </script>
+</body>
+</html>
